@@ -1,8 +1,9 @@
 import smtplib
 from email.mime.text import MIMEText
 
-EMAIL = "htthaoduyenit@gmail.com"
-APP_PASSWORD = "dhvb xjce dvut lcke"
+EMAIL = "xxx@gmail.com"
+APP_PASSWORD = "xxxx xxxx xxxx xxxx"
+
 
 def send_reset_email(to_email, otp):
     msg = MIMEText(f"""

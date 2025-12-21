@@ -6,7 +6,7 @@ import traceback
 
 # !!! LƯU Ý BẢO MẬT: API Key này hiện đang hiển thị trực tiếp trong code. 
 # Nếu bạn chia sẻ code này (vd: lên GitHub), hãy xóa key hoặc dùng biến môi trường.
-GEMINI_API_KEY = "API KEY CỦA BẠN"
+GEMINI_API_KEY = "API KEY CỦA BẠN "
 
 try:
     if GEMINI_API_KEY:
