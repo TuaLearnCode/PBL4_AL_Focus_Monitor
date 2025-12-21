@@ -1,0 +1,21 @@
+opencv-python
+numpy
+torch
+torchvision
+pillow
+tqdm
+pyyaml
+matplotlib
+scipy
+ultralytics
+scikit-learn
+facenet-pytorch
+mysql-connector-python
+google
+google-generativeai
+google-api-python-client
+mediapipe==0.10.9
+customtkinter
+bcrypt
+customtkinter pillow
+tkcalendar
