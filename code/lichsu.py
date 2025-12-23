@@ -135,8 +135,25 @@ class LichSuFrame(ctk.CTkFrame):
 
         self.tree.bind("<Button-1>", self.on_tree_click)
 
-        self.stats_label = ctk.CTkLabel(self, text="Tổng số buổi học: 0", font=("Segoe UI", 14, "bold"), fg_color="#aeeee0")
-        self.stats_label.pack(anchor="e", padx=30, pady=(0, 10))
+        # ================= FOOTER =================
+        footer = ctk.CTkFrame(
+            self,
+            height=55,
+            fg_color="#aeeee0",
+            corner_radius=0
+        )
+        footer.pack(side="bottom", fill="x")
+        footer.pack_propagate(False)
+
+        self.stats_label = ctk.CTkLabel(
+            footer,
+            text="Tổng số buổi học: 0",
+            font=("Segoe UI", 14, "bold"),
+            text_color="#141212"
+        )
+        self.stats_label.pack(side="right", padx=30)
+
+
 
     # ==================================================
     def load_sessions(self, where_sql="", params=()):

@@ -102,8 +102,8 @@ class SelectStudentDialog(tk.Toplevel):
         btn_frame = tk.Frame(self)
         btn_frame.pack(pady=10)
 
-        tk.Button(btn_frame, text="Chọn", width=10, command=self.confirm, fg_color="#148c1e").pack(side="left", padx=10)
-        tk.Button(btn_frame, text="Hủy", width=10, command=self.destroy, fg_color="#d8421d").pack(side="left")
+        tk.Button(btn_frame, text="Chọn", width=10, command=self.confirm, bg="#148c1e").pack(side="left", padx=10)
+        tk.Button(btn_frame, text="Hủy", width=10, command=self.destroy, bg="#d8421d").pack(side="left")
 
         self.students = database.get_all_students()
         self.refresh_list()
@@ -370,7 +370,8 @@ class Camera(ctk.CTkFrame):
         self.enable_behavior_analysis = False
         
         # ===== ESP32 CONFIG =====
-        self.esp32_url = "http://172.20.10.2/capture"  # ĐỔI IP
+       # self.esp32_url = "http://172.20.10.2/capture"  # ĐỔI IP wifi ông nhã
+        self.esp32_url = "http://10.168.48.125" #ip wifi chính
         self.source_type = None  # webcam | video | esp32
         
         # (Các biến quản lý Session giữ nguyên)
