@@ -1180,6 +1180,37 @@ class Camera(ctk.CTkFrame):
             except Exception as e:
                 print(f"Lỗi khi thu thập dữ liệu cho student {student_id}: {e}")
                 traceback.print_exc()
+        # ===========================================================
+        # BƯỚC MỚI: IN LOG CHI TIẾT RA CONSOLE
+        # ===========================================================
+        # Lấy tên từ cache hoặc DB
+        student_name = self.id_to_name_cache.get(student_id, f"Học sinh ID {student_id}")
+        
+        # Lấy dữ liệu từ Manager
+        focus_point = self.focus_manager.get_student_score(student_id)
+        rate = self.calculate_rate(focus_point, session_duration_sec)
+
+        logs = self.focus_manager.get_student_full_logs(student_id)
+        print(f"\n[DANH TÍNH]: {student_name} (ID: {student_id})")
+        print(f" -> Điểm tập trung: {focus_point} | Xếp loại: {rate}")
+        print(f" -> Nhật ký hành vi:")
+        
+        if not logs:
+            print("    (Không có biến động điểm)")
+        else:
+            for ts, msg, change in logs:
+                time_log = datetime.fromtimestamp(ts).strftime('%H:%M:%S')
+                mark = f"+{change}" if change > 0 else f"{change}"
+                print(f"    - [{time_log}] {msg:.<40} {mark} điểm")
+        
+        student_data_list.append({
+            "student_id": student_id,
+            "name": student_name,
+            "focus_point": focus_point,
+            "rate": rate,
+            "logs": logs
+        })
+        print("-" * 50)
         
         # 4. CHẠY AI VÀ DB TRÊN LUỒNG HIỆN TẠI (ĐỒNG BỘ)
         # BỎ THÔNG BÁO message_box để luồng không bị chặn
