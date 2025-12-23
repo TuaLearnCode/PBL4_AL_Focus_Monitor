@@ -15,7 +15,7 @@ import random
 DB_CONFIG = {
     'host': '127.0.0.1',      # Hoặc IP của server MySQL
     'user': 'root', # Tên user MySQL của bạn
-    'password': 'root', # Mật khẩu của user  
+    'password': '', # Mật khẩu của user  
     'database': 'giamsatatt' # Tên database bạn đã tạo
 }
 # ===================================================================

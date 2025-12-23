@@ -40,7 +40,8 @@ except ImportError as e:
 
 # ===== CẤU HÌNH (Đã chuyển từ app_main.py) =====
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH      = os.path.join(BASE_DIR, "..", "yolov8s-face-lindevs.pt")
+
+MODEL_PATH = os.path.join(BASE_DIR, "weights", "yolov8s-face-lindevs.pt")
 VIDEO_PATH = "" 
 FONT_PATH = os.path.join(BASE_DIR, "..", "arial.ttf")
 
