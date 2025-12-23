@@ -71,23 +71,54 @@ class SelectStudentDialog(tk.Toplevel):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.title("Chọn học sinh")
+        self.title("Đăng kí khuôn mặt")
         self.geometry("520x1200")
         self.transient(parent)
         self.grab_set()
 
         self.result = None
 
-        tk.Label(self, text="Chọn học sinh để đăng ký khuôn mặt",
-                 font=("Segoe UI", 12, "bold")).pack(pady=10)
+        search_frame = tk.Frame(self)
 
+        tk.Label(self, text="Chọn học sinh để đăng ký khuôn mặt", bg="#ffdddd",
+                 font=("Segoe UI", 20, "bold"), fg="#941D17").pack(pady=10)
+
+        #ô tìm kiếm
         self.search_var = tk.StringVar()
-        search_entry = tk.Entry(self, textvariable=self.search_var)
-        search_entry.pack(fill="x", padx=15)
+        search_entry = tk.Entry(
+            self,
+            textvariable=self.search_var,
+            bg="#FFCDAA",
+            font=("Segoe UI", 18),   # tăng chiều cao bằng font
+            relief="solid",
+            bd=1
+        )
+        search_entry.pack(fill="x", padx=15, pady=5, ipady=6)  # ipady tăng chiều cao
+
+        # ===== Placeholder =====
+        placeholder = "🔍 Tìm kiếm theo tên..."
+
+        search_entry.insert(0, placeholder)
+        search_entry.config(fg="gray")
+
+        def on_focus_in(event):
+            if search_entry.get() == placeholder:
+                search_entry.delete(0, "end")
+                search_entry.config(fg="black")
+
+        def on_focus_out(event):
+            if not search_entry.get():
+                search_entry.insert(0, placeholder)
+                search_entry.config(fg="gray")
+
+        search_entry.bind("<FocusIn>", on_focus_in)
+        search_entry.bind("<FocusOut>", on_focus_out)
+
+        # ===== Lọc khi gõ =====
         search_entry.bind("<KeyRelease>", self.refresh_list)
 
-        columns = ("ID", "Họ tên", "Lớp")
-        self.tree = ttk.Treeview(self, columns=columns, show="headings", height=12)
+        columns = ("ID", "Họ tên", "Lớp", "Ngày sinh")
+        self.tree = ttk.Treeview(self, columns=columns, show="headings", height=13)
 
         for col in columns:
             self.tree.heading(col, text=col)
@@ -96,6 +127,7 @@ class SelectStudentDialog(tk.Toplevel):
         self.tree.column("ID", width=60)
         self.tree.column("Họ tên", width=200, anchor="w")
         self.tree.column("Lớp", width=100)
+        self.tree.column("Ngày sinh", width=120)
 
         self.tree.pack(fill="both", expand=True, padx=15, pady=10)
 
@@ -115,12 +147,16 @@ class SelectStudentDialog(tk.Toplevel):
         self.tree.delete(*self.tree.get_children())
 
         for s in self.students:
-            if keyword and keyword not in s["name"].lower():
+            name = s["name"].lower()
+
+            if keyword and keyword not in name:
                 continue
+
             self.tree.insert("", "end", values=(
                 s["student_id"],
                 s["name"],
-                s["class_name"]
+                s["class_name"],
+                s.get("birthday", "")   # thêm ngày sinh
             ))
 
     def confirm(self):
