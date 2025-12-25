@@ -2,6 +2,17 @@ import customtkinter as ctk
 from tkinter import ttk, messagebox
 import database
 from datetime import datetime
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+from tkinter import filedialog
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+import tempfile
+import os
+import webbrowser
+
 
 ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
@@ -33,15 +44,15 @@ class ChiTietFrame(ctk.CTkFrame):
     def create_widgets(self):
 
         # ================= HEADER =================
-        header = ctk.CTkFrame(self, height=80, fg_color="#aeeee0", corner_radius=0)
+        header = ctk.CTkFrame(self, height=70, fg_color="#aeeee0", corner_radius=0)
         header.pack(fill="x")
         header.pack_propagate(False)
 
         ctk.CTkButton(
             header,
             text="← Quay lại",
-            width=100,
-            fg_color="#9A9CE9",
+            width=100,  
+            fg_color="#9295F3",
             text_color="#ffffff",
             command=lambda: self.on_navigate("lichsu")
         ).place(x=20, rely=0.5, anchor="w")
@@ -56,10 +67,10 @@ class ChiTietFrame(ctk.CTkFrame):
 
         # ================= INFO CARD =================
         info_card = ctk.CTkFrame(self, fg_color="#ffffff", corner_radius=16)
-        info_card.pack(fill="x", padx=20, pady=(20, 10))
+        info_card.pack(fill="x", padx=20, pady=(10, 10))
 
         info_grid = ctk.CTkFrame(info_card, fg_color="transparent")
-        info_grid.pack(padx=20, pady=15)
+        info_grid.pack(padx=20, pady=5)
 
         labels = [
             "ID buổi học:",
@@ -77,7 +88,7 @@ class ChiTietFrame(ctk.CTkFrame):
                 text=text,
                 font=("Segoe UI", 13, "bold"),
                 text_color="#34495e"
-            ).grid(row=i, column=0, sticky="w", padx=(0, 20), pady=6)
+            ).grid(row=i, column=0, sticky="w", padx=(0, 20), pady=2)
 
             value = ctk.CTkLabel(
                 info_grid,
@@ -85,13 +96,13 @@ class ChiTietFrame(ctk.CTkFrame):
                 font=("Segoe UI", 13),
                 text_color="#2c3e50"
             )
-            value.grid(row=i, column=1, sticky="w", pady=6)
+            value.grid(row=i, column=1, sticky="w", pady=2)
 
             self.info_labels[text] = value
 
         # ================= TOOLBAR =================
         toolbar = ctk.CTkFrame(self, height=55, fg_color="#a3dcef")
-        toolbar.pack(fill="x", padx=20, pady=10)
+        toolbar.pack(fill="x", padx=20, pady=2)
         toolbar.pack_propagate(False)
 
         ctk.CTkLabel(
@@ -103,11 +114,20 @@ class ChiTietFrame(ctk.CTkFrame):
         ctk.CTkButton(
             toolbar,
             text="🔄 Làm mới",
-            width=120,
-            fg_color="#64c4c3",
+            width=100,
+            fg_color="#60ccca",
             text_color="#000000",
             command=self.load_focus_records
         ).pack(side="right", padx=20)
+
+        ctk.CTkButton(
+            toolbar,
+            text="📄 Xuất PDF",
+            width=100,
+            fg_color="#7cd173",
+            text_color="#000000",
+            command=self.preview_export_pdf
+        ).pack(side="right", padx=(0, 10))
 
         # ================= TABLE =================
         table_frame = ctk.CTkFrame(self, fg_color="#ffffff")
@@ -218,37 +238,61 @@ class ChiTietFrame(ctk.CTkFrame):
             conn = database.get_db_connection()
             cursor = conn.cursor(dictionary=True)
 
+            # 🔑 Lấy lớp của buổi học
+            class_name = self.seasion_info["class_name"]
+
+            # 🔑 LẤY TOÀN BỘ HỌC SINH + LEFT JOIN focus_record
             cursor.execute("""
-                SELECT fr.appear, fr.focus_point, fr.rate, fr.note,
-                       s.name, s.class_name
-                FROM focus_record fr
-                JOIN student s ON fr.student_id = s.student_id
-                WHERE fr.seasion_id = %s
-                ORDER BY s.name
-            """, (self.seasion_id,))
+                SELECT
+                    s.student_id,
+                    s.name,
+                    s.class_name,
+                    fr.appear,
+                    fr.focus_point,
+                    fr.rate,
+                    fr.note
+                FROM student s
+                LEFT JOIN focus_record fr
+                    ON fr.student_id = s.student_id
+                AND fr.seasion_id = %s
+                WHERE s.class_name = %s
+                ORDER BY
+                    (fr.appear IS NULL OR fr.appear = 0),
+                    s.name
+            """, (self.seasion_id, class_name))
 
             records = cursor.fetchall()
             cursor.close()
             conn.close()
 
             total = len(records)
-            present = sum(1 for r in records if r["appear"])
-            absent = total - present
-            avg = sum(r["focus_point"] for r in records if r["appear"]) / present if present else 0
+            present = 0
+            focus_sum = 0
 
             for i, r in enumerate(records, start=1):
-                tag = "present" if r["appear"] else "absent"
+                is_present = bool(r["appear"])
+
+                if is_present:
+                    present += 1
+                    focus_sum += r["focus_point"] or 0
+
                 self.tree.insert(
                     "",
                     "end",
                     values=(
-                        i, r["name"], r["class_name"],
-                        "✓" if r["appear"] else "✗",
-                        r["focus_point"], r["rate"],
-                        r["note"] or ""
+                        i,
+                        r["name"],
+                        r["class_name"],
+                        "✓" if is_present else "✗",
+                        r["focus_point"] if is_present else "",
+                        r["rate"] if is_present else "",
+                        r["note"] if is_present else ""
                     ),
-                    tags=(tag,)
+                    tags=("present" if is_present else "absent",)
                 )
+
+            absent = total - present
+            avg = focus_sum / present if present > 0 else 0
 
             self.total_label.configure(text=f"Tổng: {total}")
             self.present_label.configure(text=f"Có mặt: {present}")
@@ -257,6 +301,130 @@ class ChiTietFrame(ctk.CTkFrame):
 
         except Exception as e:
             messagebox.showerror("Lỗi", f"Không thể tải dữ liệu:\n{e}")
+
+    # Hàm xuất báo cáo PDF
+    def build_pdf(self, file_path):
+        pdfmetrics.registerFont(
+            TTFont("DejaVu", "font/DejaVuSans.ttf")
+        )
+
+        doc = SimpleDocTemplate(file_path, pagesize=A4)
+        styles = getSampleStyleSheet()
+        styles["Title"].fontName = "DejaVu"
+        styles["Normal"].fontName = "DejaVu"
+
+        elements = []
+
+        elements.append(Paragraph(
+            f"<b>CHI TIẾT BUỔI HỌC - {self.seasion_info['class_name']}</b>",
+            styles["Title"]
+        ))
+        elements.append(Spacer(1, 12))
+
+        # INFO TABLE (đã căn hàng)
+        info_table_data = [
+            ["ID buổi học", str(self.seasion_info["seasion_id"])],
+            ["Lớp", self.seasion_info["class_name"]],
+            ["Thời gian bắt đầu", self._fmt(self.seasion_info["start_time"])],
+            ["Thời gian kết thúc", self._fmt(self.seasion_info["end_time"])],
+            ["Ngày tạo", self._fmt(self.seasion_info["created_at"])],
+        ]
+
+        info_table = Table(info_table_data, colWidths=[120, 350])
+        info_table.setStyle(TableStyle([
+            ("FONTNAME", (0, 0), (-1, -1), "DejaVu"),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ]))
+        elements.append(info_table)
+        elements.append(Spacer(1, 15))
+
+        # TABLE HỌC SINH
+        table_data = [[
+            "STT", "Tên học sinh", "Lớp",
+            "Có mặt", "Điểm tập trung", "Đánh giá", "Ghi chú"
+        ]]
+
+        for item in self.tree.get_children():
+            table_data.append(list(self.tree.item(item, "values")))
+
+        table = Table(table_data, repeatRows=1)
+        table.setStyle(TableStyle([
+            ("FONTNAME", (0, 0), (-1, -1), "DejaVu"),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.lightblue),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ]))
+
+        elements.append(table)
+        doc.build(elements)
+
+    def preview_export_pdf(self):
+        # 1. Tạo file PDF tạm
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+        tmp_path = tmp.name
+        tmp.close()
+
+        # 2. Build PDF tạm
+        self.build_pdf(tmp_path)
+
+        # 3. Mở PDF để xem trước
+        webbrowser.open(f"file:///{tmp_path}")
+
+        # 4. Hiện dialog xác nhận
+        self.show_export_confirm_dialog(tmp_path)
+
+
+    def show_export_confirm_dialog(self, temp_pdf_path):
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("Xác nhận xuất PDF")
+        dialog.geometry("400x160")
+        dialog.grab_set()
+
+        ctk.CTkLabel(
+            dialog,
+            text="Bạn có muốn xuất file PDF này không?",
+            font=("Segoe UI", 14, "bold")
+        ).pack(pady=20)
+
+        btn_frame = ctk.CTkFrame(dialog, fg_color="transparent")
+        btn_frame.pack(pady=10)
+
+        # ❌ HỦY
+        def cancel():
+            try:
+                os.remove(temp_pdf_path)
+            except:
+                pass
+            dialog.destroy()
+
+        # ✅ XUẤT PDF
+        def confirm_export():
+            save_path = filedialog.asksaveasfilename(
+                defaultextension=".pdf",
+                filetypes=[("PDF files", "*.pdf")]
+            )
+            if save_path:
+                os.replace(temp_pdf_path, save_path)
+                messagebox.showinfo("Thành công", "Xuất PDF thành công!")
+            dialog.destroy()
+
+        ctk.CTkButton(
+            btn_frame,
+            text="❌ Hủy",
+            width=120,
+            fg_color="#e74c3c",
+            command=cancel
+        ).pack(side="left", padx=10)
+
+        ctk.CTkButton(
+            btn_frame,
+            text="✅ Xuất PDF",
+            width=120,
+            fg_color="#2ecc71",
+            command=confirm_export
+        ).pack(side="left", padx=10)
+
 
     # ==================================================
     def _fmt(self, dt):

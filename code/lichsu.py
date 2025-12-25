@@ -30,8 +30,8 @@ class LichSuFrame(ctk.CTkFrame):
     def create_widgets(self):
 
         # ================= HEADER =================
-        header = ctk.CTkFrame(self, height=90, corner_radius=0, fg_color="#aeeee0")
-        header.pack(fill="x")
+        header = ctk.CTkFrame(self, height=80, corner_radius=0, fg_color="#aeeee0")
+        header.pack(fill="x", side="top")
         header.pack_propagate(False)
 
         ctk.CTkButton(
@@ -47,11 +47,16 @@ class LichSuFrame(ctk.CTkFrame):
             text="LỊCH SỬ CÁC BUỔI HỌC",
             font=("Segoe UI", 20, "bold"),
             text_color="#ef4385"
-        ).place(relx=0.5, rely=0.2, anchor="center")
+        ).place(relx=0.5, rely=0.5, anchor="center")
+
+        # ================= TOOLBAR =================
+        toolbar = ctk.CTkFrame(self, height=60, fg_color="#a3dcef")
+        toolbar.pack(fill="x", padx=15, pady=(10, 5))
+        toolbar.pack_propagate(False)
 
         # ===== FILTER DATE =====
-        filter_frame = ctk.CTkFrame(header, fg_color="transparent")
-        filter_frame.place(relx=0.5, rely=0.65, anchor="center")
+        filter_frame = ctk.CTkFrame(toolbar, fg_color="transparent")
+        filter_frame.pack(side="left", padx=15)
 
         self.from_date_var = ctk.StringVar()
         self.to_date_var = ctk.StringVar()
@@ -105,15 +110,16 @@ class LichSuFrame(ctk.CTkFrame):
         table_frame = ctk.CTkFrame(self)
         table_frame.pack(fill="both", expand=True, padx=15, pady=10)
 
-        columns = ("ID", "Lớp", "Bắt đầu", "Kết thúc", "Thời lượng", "👁 Xem", "🗑 Xóa")
+        columns = ("STT","ID", "Lớp", "Bắt đầu", "Kết thúc", "Thời lượng", "👁 Xem", "🗑 Xóa")
         self.tree = ttk.Treeview(table_frame, columns=columns, show="headings")
 
         for col in columns:
             self.tree.heading(col, text=col)
             self.tree.column(col, anchor="center")
 
-        self.tree.column("ID", width=40)
-        self.tree.column("Lớp", width=180, anchor="w")
+        self.tree.column("STT", width=15)
+        self.tree.column("ID", width=15)
+        self.tree.column("Lớp", width=30)
         self.tree.column("Bắt đầu", width=170)
         self.tree.column("Kết thúc", width=170)
         self.tree.column("Thời lượng", width=170)
@@ -139,10 +145,9 @@ class LichSuFrame(ctk.CTkFrame):
         footer = ctk.CTkFrame(
             self,
             height=55,
-            fg_color="#aeeee0",
-            corner_radius=0
+            fg_color="#aeeee0"
         )
-        footer.pack(side="bottom", fill="x")
+        footer.pack(fill="x", padx=15, pady=(5, 15))
         footer.pack_propagate(False)
 
         self.stats_label = ctk.CTkLabel(
@@ -151,7 +156,7 @@ class LichSuFrame(ctk.CTkFrame):
             font=("Segoe UI", 14, "bold"),
             text_color="#141212"
         )
-        self.stats_label.pack(side="right", padx=30)
+        self.stats_label.pack(side="right", padx=20)
 
 
 
@@ -177,6 +182,7 @@ class LichSuFrame(ctk.CTkFrame):
                 "",
                 "end",
                 values=(
+                    i+1,
                     s["seasion_id"],
                     s["class_name"],
                     self._fmt(s["start_time"]),
@@ -224,12 +230,15 @@ class LichSuFrame(ctk.CTkFrame):
         if not row:
             return
 
-        seasion_id, class_name = self.tree.item(row)["values"][:2]
+        values = self.tree.item(row)["values"]
+        seasion_id = values[1]   # ID
+        class_name = values[2]   # Lớp
 
-        if col == "#6":
+
+        if col == "#7":
             self.on_view_detail(seasion_id)
 
-        elif col == "#7":
+        elif col == "#8":
             if messagebox.askyesno(
                 "Xác nhận",
                 f"Xóa buổi học ID {seasion_id} - Lớp {class_name}?"
@@ -240,11 +249,37 @@ class LichSuFrame(ctk.CTkFrame):
     def _delete_session(self, seasion_id):
         conn = database.get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM seasion WHERE seasion_id = %s", (seasion_id,))
-        conn.commit()
-        cursor.close()
-        conn.close()
-        self.load_sessions()
+
+        try:
+            # 1️⃣ Xóa dữ liệu con trước
+            cursor.execute(
+                "DELETE FROM focus_record WHERE seasion_id = %s",
+                (seasion_id,)
+            )
+
+            # 2️⃣ Xóa session
+            cursor.execute(
+                "DELETE FROM seasion WHERE seasion_id = %s",
+                (seasion_id,)
+            )
+
+            conn.commit()
+
+            # ✅ THÔNG BÁO THÀNH CÔNG
+            messagebox.showinfo(
+                "Thành công",
+                f"Đã xóa buổi học (ID = {seasion_id}) thành công!"
+            )
+            self.load_sessions()
+
+        except Exception as e:
+            conn.rollback()
+            messagebox.showerror("Lỗi", str(e))
+
+        finally:
+            cursor.close()
+            conn.close()
+
 
     # ==================================================
     def _fmt(self, dt):

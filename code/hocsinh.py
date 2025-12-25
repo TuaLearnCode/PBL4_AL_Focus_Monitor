@@ -40,7 +40,7 @@ class HocSinhFrame(ctk.CTkFrame):
             text="← Quay lại",
             width=90,
             text_color="#ffffff",
-            fg_color="#9A9CE9",
+            fg_color="#8285EE",
             command=lambda: self.on_navigate("home")
         ).place(x=20, rely=0.5, anchor="w")
 
@@ -56,7 +56,7 @@ class HocSinhFrame(ctk.CTkFrame):
         toolbar.pack(fill="x", padx=15, pady=(10, 5))
         toolbar.pack_propagate(False)
 
-            # Thêm nút "Thêm học sinh"
+        # Thêm nút "Thêm học sinh"
         ctk.CTkButton(
             toolbar,
             text="➕ Thêm học sinh",
@@ -64,15 +64,6 @@ class HocSinhFrame(ctk.CTkFrame):
             text_color="#ffffff",
             fg_color="#28a745",
             command=self.add_new_student
-        ).pack(side="left", padx=10)
-
-        ctk.CTkButton(
-            toolbar,
-            text="🔄 Làm mới",
-            width=90,
-            text_color="#000000",
-            fg_color="#64c4c3",
-            command=self.load_students
         ).pack(side="left", padx=10)
 
         ctk.CTkLabel(toolbar, text="Tìm kiếm:").pack(side="left", padx=(20, 5))
@@ -90,34 +81,12 @@ class HocSinhFrame(ctk.CTkFrame):
             command=self.clear_search
         ).pack(side="left", padx=5)
 
-        ctk.CTkLabel(
-            toolbar,
-            text="Lớp:",
-            font=("Segoe UI", 13)
-        ).pack(side="left", padx=(20, 5))
-
-        style = ttk.Style()
-        style.configure(
-            "BigFont.TCombobox",
-            font=("Segoe UI", 16)
-        )
-
-        self.class_filter = ttk.Combobox(
-            toolbar,
-            state="readonly",
-            width=20,
-            height=20,
-            style="BigFont.TCombobox"
-        )
-        self.class_filter.pack(side="left")
-        self.class_filter.bind("<<ComboboxSelected>>", lambda e: self.filter_by_class())
-
         # ================= TABLE =================
         table_frame = ctk.CTkFrame(self)
         table_frame.pack(fill="both", expand=True, padx=15, pady=10)
 
-        columns = ("ID", "Họ tên", "Lớp", "Giới tính", "Ngày sinh", "👁 Xem","✏️ Sửa", "🗑 Xóa")
-        self.tree = ttk.Treeview(
+        columns = ("STT", "ID", "Họ tên", "Lớp", "Giới tính", "Ngày sinh", "👁 Xem","✏️ Sửa", "🗑 Xóa")
+        self.tree = ttk.Treeview (
             table_frame,
             columns=columns,
             show="headings",
@@ -128,7 +97,8 @@ class HocSinhFrame(ctk.CTkFrame):
             self.tree.heading(col, text=col)
             self.tree.column(col, anchor="center")
 
-        self.tree.column("ID", width=30)
+        self.tree.column("STT", width=15)
+        self.tree.column("ID", width=15)
         self.tree.column("Họ tên", width=200, anchor="w")
         self.tree.column("Lớp", width=100)
         self.tree.column("Giới tính", width=100)
@@ -152,11 +122,20 @@ class HocSinhFrame(ctk.CTkFrame):
         self.tree.tag_configure("odd", background="#ee897f")
 
         # ================= FOOTER =================
-        footer = ctk.CTkFrame(self, height=60, fg_color="#aeeee0")
+        footer = ctk.CTkFrame(
+            self,
+            height=55,
+            fg_color="#aeeee0"
+        )
         footer.pack(fill="x", padx=15, pady=(5, 15))
         footer.pack_propagate(False)
 
-        self.stats_label = ctk.CTkLabel(footer, text="Tổng số học sinh: 0")
+        self.stats_label = ctk.CTkLabel(
+            footer,
+            text="Tổng số học sinh: 0",
+            font=("Segoe UI", 14, "bold"),
+            text_color="#141212"
+        )
         self.stats_label.pack(side="right", padx=20)
 
     # ==================================================
@@ -171,6 +150,7 @@ class HocSinhFrame(ctk.CTkFrame):
             for i, s in enumerate(students):
                 tag = "even" if i % 2 == 0 else "odd"
                 self.tree.insert("", "end", values=(
+                    i+1,
                     s["student_id"],
                     s["name"],
                     s["class_name"],
@@ -182,8 +162,6 @@ class HocSinhFrame(ctk.CTkFrame):
                 ), tags=(tag,))
                 classes.add(s["class_name"])
 
-            self.class_filter["values"] = ["Tất cả"] + sorted(classes)
-            self.class_filter.current(0)
 
             self.stats_label.configure(text=f"Tổng số học sinh: {len(students)}")
 
@@ -203,20 +181,19 @@ class HocSinhFrame(ctk.CTkFrame):
             return
 
         item = self.tree.item(row)
-        student_id = item["values"][0]
+        student_id = item["values"][1]
 
         # Cột 6 = "Cập nhật" | Cột 7 = "Xóa"
-        if column == "#6":      # 👁 Xem
+        if column == "#7":      # 👁 Xem
             self.view_student(student_id)
-        elif column == "#7":    # ✏️ Sửa
+        elif column == "#8":    # ✏️ Sửa
             self.edit_student(student_id)
-        elif column == "#8":    # 🗑 Xóa
+        elif column == "#9":    # 🗑 Xóa
             self.delete_student(student_id)
 
     # ==================================================
     def search_students(self):
         text = self.search_entry.get().strip().lower()
-        selected_class = self.class_filter.get()
 
         for item in self.tree.get_children():
             self.tree.delete(item)
@@ -224,33 +201,31 @@ class HocSinhFrame(ctk.CTkFrame):
         students = database.get_all_students()
         if text:
             students = [s for s in students if text in s["name"].lower()]
-        if selected_class and selected_class != "Tất cả":
-            students = [s for s in students if s["class_name"] == selected_class]
 
         for i, s in enumerate(students):
             tag = "even" if i % 2 == 0 else "odd"
             self.tree.insert("", "end", values=(
+                i+1,
                 s["student_id"],
                 s["name"],
                 s["class_name"],
                 s["gender"],
                 self._fmt_date(s["birthday"]),
-                self._fmt_datetime(s["created_at"]),
                 "👁 Xem",
                 "✏️ Sửa",
                 "🗑 Xóa"
             ), tags=(tag,))
 
-        self.stats_label.configure(text=f"Tổng số học sinh: {len(students)}")
+        self.stats_label.configure(
+            text=f"Tổng số học sinh: {len(students)}",
+            text_color="#010101",
+            font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold")
+        )
 
-    # ==================================================
-    def filter_by_class(self):
-        self.search_students()
 
     # ==================================================
     def clear_search(self):
         self.search_entry.delete(0, "end")
-        self.class_filter.current(0)
         self.load_students()
 
     # ==================================================
