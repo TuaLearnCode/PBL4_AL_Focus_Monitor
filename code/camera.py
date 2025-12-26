@@ -281,7 +281,7 @@ class Camera(ctk.CTkFrame):
 
         self.btn_video = ctk.CTkButton(
             center_bar, text="Phát Video", command=self.toggle_play_pause, state="disabled"
-        )
+        )   
         self.btn_video.pack(side="left", padx=6)
 
         ctk.CTkButton(
@@ -408,9 +408,9 @@ class Camera(ctk.CTkFrame):
         
         # ===== ESP32 CONFIG =====
        # self.esp32_url = "http://172.20.10.2/capture"  # ĐỔI IP wifi ông nhã
-        self.esp32_url = "http://10.168.48.125" #ip wifi chính
+        self.esp32_url = "http://10.125.14.125/capture" #ip wifi chính
         self.source_type = None  # webcam | video | esp32
-        
+    
         # (Các biến quản lý Session giữ nguyên)
         self.current_session_id = None
         self.session_start_time = None      # Dùng time.time() để tính duration
@@ -495,7 +495,7 @@ class Camera(ctk.CTkFrame):
         if messagebox.askyesno("Bắt đầu buổi học?", "Bạn có muốn bắt đầu một buổi học (session) mới không?\n(Kết quả sẽ được lưu vào CSDL)", parent=self.root):
             
             # 1. [SỬA] Đặt tên lớp mặc định
-            class_name = "Lớp A"
+            class_name = "A"
             # (Đã xóa simpledialog.askstring)
             
             # 2. Tạo session trong CSDL

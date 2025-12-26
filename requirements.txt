@@ -17,6 +17,5 @@ google-api-python-client
 mediapipe==0.10.9
 customtkinter
 bcrypt
-customtkinter
-pillow
 tkcalendar
+reportlab
