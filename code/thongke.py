@@ -265,7 +265,7 @@ class ThongKeFrame(ctk.CTkFrame):
         self.top_tree.column("rank", width=10, anchor="center")
         self.top_tree.column("name", width=120, anchor="w")
         self.top_tree.column("sessions", width=20, anchor="center")
-        self.top_tree.column("avg_focus", width=30, anchor="center")
+        self.top_tree.column("avg_focus", width=30, anchor="center") # điểm tập trung trung bình của 1 học sinh
         self.top_tree.column("attendance_count", width=30, anchor="center")
 
         scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=self.top_tree.yview)
@@ -659,10 +659,7 @@ class ThongKeFrame(ctk.CTkFrame):
                     to_date + " 23:59:59"
                 ])
 
-            # Query top học sinh
-# --- CHỈNH SỬA QUERY TOP HỌC SINH ---
-            # Logic cũ: ELSE NULL (Vắng mặt không bị chia trung bình)
-            # Logic mới: ELSE 0 (Vắng mặt tính là 0 điểm và vẫn chia trung bình)
+
             query_top = f"""
             SELECT 
                 st.student_id,
@@ -690,24 +687,33 @@ class ThongKeFrame(ctk.CTkFrame):
 
             # --- CHỈNH SỬA QUERY THỐNG KÊ TỔNG QUAN ---
             # Cũng áp dụng logic ELSE 0 cho avg_focus_all
+            # --- CHỈNH SỬA QUERY THỐNG KÊ TỔNG QUAN ---
             query_stats = f"""
             SELECT 
+                (SELECT COUNT(*) FROM student WHERE class_name = %s) as total_students,
                 COUNT(DISTINCT s.seasion_id) as total_sessions,
-                COUNT(DISTINCT st.student_id) as total_students,
                 COUNT(CASE WHEN f.appear = 1 THEN 1 END) as total_attendance,
                 ROUND(AVG(CASE WHEN f.appear = 1 THEN f.focus_point ELSE 0 END), 1) as avg_focus_all,
-                COUNT(CASE WHEN f.rate = 'Cao độ' THEN 1 END) as count_cao_do,
-                COUNT(CASE WHEN f.rate = 'Tốt' THEN 1 END) as count_tot,
-                COUNT(CASE WHEN f.rate = 'Trung bình' THEN 1 END) as count_trung_binh,
-                COUNT(CASE WHEN f.rate = 'Thấp' THEN 1 END) as count_thap
+                COUNT(CASE WHEN f.rate = 'Tập trung cao độ' THEN 1 END) as count_cao_do,
+                COUNT(CASE WHEN f.rate = 'Tập trung tốt' THEN 1 END) as count_tot,
+                COUNT(CASE WHEN f.rate = 'Tập trung thấp' THEN 1 END) as count_thap
             FROM seasion s
             LEFT JOIN focus_record f ON s.seasion_id = f.seasion_id
-            LEFT JOIN student st ON f.student_id = st.student_id
             WHERE s.class_name = %s {date_filter}
             """
-            cursor.execute(query_stats, params)
-            stats = cursor.fetchone()
 
+            # Lưu ý: Vì ta thêm 1 tham số %s ở đầu (cho total_students), 
+            # ta cần cập nhật lại danh sách params truyền vào cho đúng thứ tự.
+            stats_params = [self.current_class, self.current_class]
+            if from_date and to_date:
+                stats_params.extend([
+                    from_date + " 00:00:00",
+                    to_date + " 23:59:59"
+                ])
+
+            cursor.execute(query_stats, stats_params)
+            stats = cursor.fetchone()
+            
             # Hiển thị thống kê tổng quan
             self.display_general_stats(stats)
 
@@ -796,10 +802,19 @@ class ThongKeFrame(ctk.CTkFrame):
         total_students = stats["total_students"] or 0
         total_attendance = stats["total_attendance"] or 0
         avg_focus = stats["avg_focus_all"] or 0
+        # Xếp loại mức độ tập trung DỰA TRÊN avg_focus
+        if avg_focus > 3:
+            focus_rating = "🔥 Tập trung cao độ"
+        elif avg_focus >= 1:
+            focus_rating = "✅ Tập trung tốt"
+        else:
+            focus_rating = "❌ Tập trung thấp"
+
 
         # Tính tỷ lệ có mặt
         if total_sessions > 0 and total_students > 0:
             attendance_count = (total_attendance * 100.0) / (total_sessions * total_students)
+
         else:
             attendance_count = 0
 
@@ -812,11 +827,8 @@ class ThongKeFrame(ctk.CTkFrame):
     • Tổng lượt có mặt: {total_attendance}
     • Tỷ lệ có mặt trung bình: {attendance_count:.1f}%
     • Điểm tập trung trung bình: {avg_focus:.1f}/100
-    🎯 Phân loại mức độ tập trung:
-    • Cao độ: {stats['count_cao_do']} lượt
-    • Tốt: {stats['count_tot']} lượt
-    • Trung bình: {stats['count_trung_binh']} lượt
-    • Thấp: {stats['count_thap']} lượt
+    🎯 Đánh giá mức độ tập trung chung:
+    • Xếp loại: {focus_rating}
     """
 
         self.stats_text.insert("end", stats_content)
@@ -840,11 +852,10 @@ class ThongKeFrame(ctk.CTkFrame):
             return
 
         # Dữ liệu biểu đồ
-        categories = ["Cao độ", "Tốt", "Trung bình", "Thấp"]
+        categories = ["Tập trung cao độ", "Tập trung tốt", "Tập trung thấp"]
         values = [
             stats["count_cao_do"] or 0,
             stats["count_tot"] or 0,
-            stats["count_trung_binh"] or 0,
             stats["count_thap"] or 0
         ]
         colors = ["#2ecc71", "#3498db", "#f39c12", "#e74c3c"]

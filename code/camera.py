@@ -41,7 +41,7 @@ except ImportError as e:
 # ===== CẤU HÌNH (Đã chuyển từ app_main.py) =====
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-MODEL_PATH = os.path.join(BASE_DIR, "weights", "yolov8s-face-lindevs.pt")
+MODEL_PATH = os.path.join(BASE_DIR, "../weights", "yolov8s-face-lindevs.pt")
 VIDEO_PATH = "" 
 FONT_PATH = os.path.join(BASE_DIR, "..", "arial.ttf")
 
@@ -407,9 +407,10 @@ class Camera(ctk.CTkFrame):
         self.enable_behavior_analysis = False
         
         # ===== ESP32 CONFIG =====
-       # self.esp32_url = "http://172.20.10.2/capture"  # ĐỔI IP wifi ông nhã
-        self.esp32_url = "http://10.125.14.125/capture" #ip wifi chính
-        self.source_type = None  # webcam | video | esp32
+        #self.esp32_url = "http://172.20.10.2/capture"  # ĐỔI IP wifi ông nhã
+        #self.esp32_url = "http://10.168.48.59/capture" #ip wifi chính
+        self.esp32_url = "http://10.65.161.12/capture" #ip wifi tua
+        self.source_type = "esp32"  # webcam | video | esp32
     
         # (Các biến quản lý Session giữ nguyên)
         self.current_session_id = None
@@ -456,23 +457,37 @@ class Camera(ctk.CTkFrame):
         except: pass
         return m
 
+    # def read_esp32_frame(self):
+    #     """
+    #     Đọc 1 frame JPEG từ ESP32-CAM qua HTTP
+    #     Trả về frame BGR (numpy) hoặc None
+    #     """
+    #     try:
+    #         r = requests.get(self.esp32_url, timeout=2)
+    #         if r.status_code != 200:
+    #             return None
+
+    #         img_array = np.frombuffer(r.content, np.uint8)
+    #         frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+    #         return frame
+
+    #     except Exception as e:
+    #         print(f"Lỗi ESP32 frame: {e}")
+    #         return None
     def read_esp32_frame(self):
-        """
-        Đọc 1 frame JPEG từ ESP32-CAM qua HTTP
-        Trả về frame BGR (numpy) hoặc None
-        """
         try:
             r = requests.get(self.esp32_url, timeout=2)
             if r.status_code != 200:
                 return None
 
-            img_array = np.frombuffer(r.content, np.uint8)
-            frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+            img = np.frombuffer(r.content, np.uint8)
+            frame = cv2.imdecode(img, cv2.IMREAD_COLOR)
             return frame
 
         except Exception as e:
-            print(f"Lỗi ESP32 frame: {e}")
+            print("Lỗi ESP32 frame:", e)
             return None
+
 
     def select_video_file(self):
         # (Hàm này giữ nguyên)
@@ -1294,12 +1309,10 @@ class Camera(ctk.CTkFrame):
             scaling_factor = STANDARD_DURATION_SEC / duration_sec
             prorated_score = score * scaling_factor
         
-        if prorated_score >= 12:
+        if prorated_score >= 15:
             return 'Cao độ'
-        elif prorated_score >= 9:
+        elif prorated_score >= 5:
             return 'Tốt'
-        elif prorated_score >= 5: 
-            return 'Trung bình'
         else:
             return 'Thấp'
 
