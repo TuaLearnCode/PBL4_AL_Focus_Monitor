@@ -795,6 +795,8 @@ class Camera(ctk.CTkFrame):
                     ok, frame = self.cap.read()
                     if not ok:
                         self.running = False
+                        # Sử dụng .after(0, ...) để gọi hàm stop() an toàn từ luồng chính
+                        self.root.after(0, self.stop)
                         break
 
                 if frame is None:
@@ -1178,6 +1180,40 @@ class Camera(ctk.CTkFrame):
         except Exception as e:
             if self.running: print(f"gui_loop: Lỗi nghiêm trọng: {e}"); traceback.print_exc()
 
+    def build_note_from_logs(self, logs):
+        """
+        Format: [HH:MM:SS] điểm_hiện_tại (lý do cộng/trừ)
+        - Chỉ ghi log có change != 0
+        - điểm_hiện_tại = tổng tích lũy tại thời điểm đó
+        """
+        if not logs:
+            return "Không có cộng / trừ điểm."
+
+        logs_sorted = sorted(logs, key=lambda x: x[0])
+
+        current_score = 0
+        lines = []
+
+        for ts, msg, change in logs_sorted:
+            if change == 0:
+                continue
+
+            current_score += change
+            time_log = datetime.fromtimestamp(ts).strftime('%H:%M:%S')
+
+            # 🔥 FIX: dùng msg trực tiếp, KHÔNG bọc +1/-1 lần nữa
+            lines.append(
+                f"[{time_log}] {current_score} ({msg})"
+            )
+
+        if not lines:
+            return "Không có cộng / trừ điểm."
+
+        return "\n".join(lines)
+
+
+
+    
     # ===================================================================
     # >>> SỬA LỖI: CHẠY ĐỒNG BỘ VÀ KHÔNG DÙNG THREADING CHO DB/AI <<<
     # ===================================================================
@@ -1275,13 +1311,15 @@ class Camera(ctk.CTkFrame):
             note = "Không có ghi nhận chi tiết."
             
             try:
+                note = self.build_note_from_logs(logs)
+
                 # 4a. Gọi AI Tóm tắt (Sẽ chặn luồng chính cho đến khi hoàn tất)
-                if logs:
-                    try:
-                        note = ai_summarizer.summarize_focus_logs(logs)
-                    except BaseException as e:
-                        print(f"Lỗi gọi AI: {e}")
-                        note = f"Lỗi AI: {str(e)}" 
+                # if logs:
+                #    try:
+                #        note = ai_summarizer.summarize_focus_logs(logs)
+                #    except BaseException as e:
+                #        print(f"Lỗi gọi AI: {e}")
+                #        note = f"Lỗi AI: {str(e)}" 
 
                 # 4b. Cập nhật CSDL (Đồng bộ)
                 database.update_focus_record(
