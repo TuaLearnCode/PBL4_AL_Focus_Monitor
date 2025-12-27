@@ -826,7 +826,7 @@ class ThongKeFrame(ctk.CTkFrame):
     • Tổng số học sinh: {total_students}
     • Tổng lượt có mặt: {total_attendance}
     • Tỷ lệ có mặt trung bình: {attendance_count:.1f}%
-    • Điểm tập trung trung bình: {avg_focus:.1f}/100
+    • Điểm tập trung trung bình: {avg_focus:.1f}
     🎯 Đánh giá mức độ tập trung chung:
     • Xếp loại: {focus_rating}
     """
