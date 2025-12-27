@@ -1340,16 +1340,16 @@ class Camera(ctk.CTkFrame):
     def calculate_rate(self, score, duration_sec):
         """Tính toán rate dựa trên điểm và tỉ lệ thời gian chuẩn 45 phút."""
         
-        STANDARD_DURATION_SEC = 45 * 60 
+        STANDARD_DURATION_SEC = 5 * 60 
         prorated_score = score
         
         if duration_sec > 5: 
             scaling_factor = STANDARD_DURATION_SEC / duration_sec
             prorated_score = score * scaling_factor
         
-        if prorated_score >= 15:
+        if prorated_score >= 3:
             return 'Cao độ'
-        elif prorated_score >= 5:
+        elif prorated_score >= 1:
             return 'Tốt'
         else:
             return 'Thấp'
